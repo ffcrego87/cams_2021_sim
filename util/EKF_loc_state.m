@@ -1,4 +1,4 @@
-classdef EKF_range < handle
+classdef EKF_loc_state < handle
    properties
        dim
        NAg
@@ -14,9 +14,10 @@ classdef EKF_range < handle
        vstd_d
        v_distance_flag
        dvlstd
+       id
        x_hat
        P
-       y
+       x_hat_loc_next
        alpha 
        beta
        Nbits
@@ -28,7 +29,8 @@ classdef EKF_range < handle
        y_hat
    end
    methods
-       function obj=EKF_range(A,B,p_beacon,N_dvl,wstd,vstd_d,v_distance_flag,dvlstd,xstd,sstd,p_nominal,speed,alpha,beta,Lambda_zero,Nbits)
+       function obj=EKF_loc_state(id,A,B,p_beacon,N_dvl,wstd,vstd_d,v_distance_flag,dvlstd,xstd,sstd,p_nominal,speed,alpha,beta,Lambda_zero,Nbits)
+           obj.id = id;
            obj.dimp = size(p_nominal,1);
            obj.dim = obj.dimp*2;
            obj.NAg = size(p_nominal,2);
@@ -52,36 +54,47 @@ classdef EKF_range < handle
            obj.vstd_d = vstd_d;
            obj.v_distance_flag = v_distance_flag;
            obj.x_hat = zeros(obj.NAg*obj.dim,1);
-           obj.y = zeros(2+obj.NAg*(obj.NAg-1),1);
            for j=1:obj.NAg
                obj.x_hat=obj.x_hat+obj.State_select{j}'*[p_nominal(:,j);speed];
            end
+           obj.x_hat_loc_next = [p_nominal(:,id);speed];
            obj.P = kron(eye(obj.NAg),diag([xstd*ones(1,obj.dimp) sstd*ones(1,obj.dimp)]));
            obj.alpha = alpha;
            obj.beta = beta;
            obj.Nbits = Nbits;
+           obj.Lambda = cell(obj.NAg,1);
            for i=1:obj.NAg
-               obj.Lambda{i}=Lambda_zero*ones(obj.dimp*(i<=obj.N_dvl)+obj.NAg+obj.NB-1,1);
+               obj.Lambda{i}=Lambda_zero*ones(obj.dim,1);
            end
        end
-       function Update(obj,Messages)
-           obj.Compute_Meas(Messages)
-           C_aux = obj.C;
-           y_hat_aux = obj.y_hat;
-           S=C_aux*obj.P*C_aux'+obj.R;
-           K=obj.P*C_aux'*S^-1;
-           obj.x_hat = obj.x_hat + K*(obj.y-y_hat_aux);
-           obj.P = (eye(size(obj.P))-K*obj.C)*obj.P;
+       function Update(obj,y)
+           
+           %global auxiliary variables
+           C_glob = obj.C;
+           R_glob = obj.R;
+           L_glob = zeros(obj.NAg*obj.dim,obj.dimp*obj.N_dvl+obj.NAg*(obj.NAg+obj.NB-1));
+           for i=1:obj.NAg
+               %auxiliary variables
+               C_aux = obj.Output_select{i}*C_glob;
+               R_aux = obj.Output_select{i}*R_glob*obj.Output_select{i}';
+               S=C_aux*obj.P*C_aux'+R_aux;
+               K=obj.P*C_aux'*S^-1;
+               G=obj.State_select{i}'*obj.State_select{i}*K;
+               if i==obj.id
+                   y_hat_aux = obj.Output_select{i}*obj.y_hat;
+                   obj.x_hat_loc_next = obj.State_select{i}*(obj.x_hat + G*(y-y_hat_aux));
+               end
+               L_glob = L_glob+G*obj.Output_select{i};
+           end
+           obj.P = (eye(obj.NAg*obj.dim)-L_glob*C_glob)*obj.P*(eye(obj.NAg*obj.dim)-L_glob*C_glob)'+L_glob*R_glob*L_glob';
        end
        function Predict(obj,u)
            obj.x_hat = obj.A*obj.x_hat+obj.B*u;
            obj.P = obj.A*obj.P*obj.A'+obj.Q;
        end
-       function Compute_Meas(obj,Messages)
-           idx=0;
+       function Fuse(obj,Messages)
            for i=1:obj.NAg
-               obj.y(idx+(1:size(Messages{i},1)))= obj.Decode(Messages{i},i);
-               idx = idx+size(Messages{i},1);
+               obj.x_hat((i-1)*obj.dim+(1:obj.dim),1)=obj.Decode(Messages{i},i);
            end
        end
        function y_hat=get.y_hat(obj)
@@ -199,12 +212,11 @@ classdef EKF_range < handle
                idx = idx+size(R_loc,1);
            end
        end
-       
-       function Message=Broadcast(obj,y,i)
-           Message = Quantize(obj.Nbits,obj.Lambda{i},y-obj.Output_select{i}*obj.y_hat);
+       function Message=Broadcast(obj)
+           Message = Quantize(obj.Nbits,obj.Lambda{obj.id},obj.x_hat_loc_next-obj.State_select{obj.id}*obj.x_hat);
        end
        function data = Decode(obj,Message,i)
-           data = obj.Output_select{i}*obj.y_hat+DeQuantizer(obj.Nbits, obj.Lambda{i},Message);
+           data = obj.State_select{i}*obj.x_hat+DeQuantizer(obj.Nbits, obj.Lambda{i},Message);
            obj.Lambda{i} = ((abs(Message)==(2^(obj.Nbits-1)-1))*obj.alpha+(abs(Message)~=(2^(obj.Nbits-1)-1))*obj.beta).*obj.Lambda{i};
        end
    end

@@ -74,7 +74,9 @@ classdef Controller < handle
                for j=2:obj.NAg
                    ep=ep+obj.pos_cell{i}-obj.pos_cell{j}-obj.Dd{i,j};
                end
-               ep=ep./(obj.NAg-2);
+               if obj.NAg>2
+                   ep=ep./(obj.NAg-2);
+               end
                ep=0.3*ep+0.7*(obj.pos_cell{i}-obj.pos_cell{1}-obj.Dd{i,1});
                p_dot_d=obj.v_cell{1}-obj.Kp*ep;
                es=obj.v_cell{i}-p_dot_d;

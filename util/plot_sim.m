@@ -24,10 +24,9 @@ end
 hold off
 setniceplot
 axis equal
-xlabel('X')
-ylabel('Y')
-title('Position')
-%print -dpdf
+xlabel('X (m)')
+ylabel('Y (m)')
+print -dpdf
 
 %speed
 figure
@@ -77,9 +76,9 @@ title('Leader speed')
 figure
 for i=1:NAgents
     for j=(2:NAgents)-1+NBeacons
-        plot(dt*(1:ifinal)-dt,Agents_log{i}.y(j+2*(i==1),:),'Color',colors(i,:))
+        plot(dt*(1:ifinal)-dt,Agents_log{i}.y(j+dimp*(i<=N_dvl),:),'Color',colors(i,:))
         hold on
-        plot(dt*(1:ifinal)-dt,Agents_log{i}.y_hat(2+j+(i-1)*(NAgents+NBeacons-1),:),'Color',colors(i,:),'LineStyle','--')
+        plot(dt*(1:ifinal)-dt,Agents_log{i}.y_hat(dimp*i*(i<=N_dvl)+dimp*N_dvl*(i>N_dvl)+j+(i-1)*(NAgents+NBeacons-1),:),'Color',colors(i,:),'LineStyle','--')
     end
 end
 hold off
@@ -92,9 +91,9 @@ title('Inter-vehicle range measurements')
 figure
 for i=1:NAgents
     for j=1:NBeacons
-        plot(dt*(1:ifinal)-dt,Agents_log{i}.y(j+2*(i==1),:),'Color',colors(i,:))
+        plot(dt*(1:ifinal)-dt,Agents_log{i}.y(j+dimp*(i<=N_dvl),:),'Color',colors(i,:))
         hold on
-        plot(dt*(1:ifinal)-dt,Agents_log{i}.y_hat(2+j+(i-1)*(NAgents+NBeacons-1),:),'Color',colors(i,:),'LineStyle','--')
+        plot(dt*(1:ifinal)-dt,Agents_log{i}.y_hat(dimp*i*(i<=N_dvl)+dimp*N_dvl*(i>N_dvl)+j+(i-1)*(NAgents+NBeacons-1),:),'Color',colors(i,:),'LineStyle','--')
     end
 end
 hold off
@@ -102,3 +101,50 @@ setniceplot
 xlabel('dist')
 xlabel('t')
 title('Beacon-vehicle range measurements')
+
+%Estimation error norm
+figure
+for i=1:NAgents
+    Eerr = Agents_log{i}.x-Output_select{i}*Agents_log{i}.x_hat;
+    plot(dt*(1:ifinal)-dt,sqrt(sum(Eerr.^2,1)),'Color',colors(i,:))
+    hold on
+end
+hold off
+setniceplot
+ylabel('dist')
+xlabel('t (s)')
+title('estimation error (m)')
+print -dpdf
+
+%Lambda
+figure
+for i=1:NAgents
+    if tr_loc_state
+        for j=1:dimp
+            plot(dt*(1:ifinal)-dt,Agents_log{i}.Lambda(j,:),'Color',colors(i,:))
+            hold on
+            plot(dt*(1:ifinal)-dt,Agents_log{i}.Lambda(j+dimp,:),'Color',colors(i,:),'LineStyle','--')
+        end
+    else
+        if i<= N_dvl
+            for j=1:dimp
+                plot(dt*(1:ifinal)-dt,Agents_log{i}.Lambda(j+dimp,:),'Color',colors(i,:),'LineStyle','--')
+                hold on
+            end
+        end
+        for j=(i<= N_dvl)*dimp+(1:Nb)
+            plot(dt*(1:ifinal)-dt,Agents_log{i}.Lambda(j,:),'Color',colors(i,:),'LineStyle','--')
+        end
+            
+        for j=((i<= N_dvl)*dimp+Nb):size(Agents_log{i}.Lambda,1)
+            plot(dt*(1:ifinal)-dt,Agents_log{i}.Lambda(j,:),'Color',colors(i,:))
+            hold on
+        end
+    end
+end
+hold off
+setniceplot
+set(gca, 'YScale', 'log')
+ylabel('Quant. interval length')
+xlabel('t (s)')
+print -dpdf
