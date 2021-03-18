@@ -12,7 +12,15 @@ problem
 setup_script
 
 %% Simulation
-simulation
+if Nb_test
+    recursive_sim
+else
+    simulation
+end
 
 %% Plot
-plot_sim
+if Nb_test
+    plot_nb_test
+else
+    plot_sim
+end

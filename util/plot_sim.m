@@ -26,7 +26,11 @@ setniceplot
 axis equal
 xlabel('X (m)')
 ylabel('Y (m)')
-print -dpdf
+if tr_loc_state
+    print -dpdf pos_x
+else
+    print -dpdf pos_y
+end
 
 %speed
 figure
@@ -86,6 +90,11 @@ setniceplot
 ylabel('dist')
 xlabel('t')
 title('Inter-vehicle range measurements')
+if tr_loc_state
+    print -dpdf vr_x
+else
+    print -dpdf vr_y
+end
 
 %beacon-vehicle distances
 figure
@@ -101,6 +110,11 @@ setniceplot
 xlabel('dist')
 xlabel('t')
 title('Beacon-vehicle range measurements')
+if tr_loc_state
+    print -dpdf br_x
+else
+    print -dpdf br_y
+end
 
 %Estimation error norm
 figure
@@ -111,40 +125,57 @@ for i=1:NAgents
 end
 hold off
 setniceplot
-ylabel('dist')
+ylabel('estimation error (m)')
 xlabel('t (s)')
-title('estimation error (m)')
-print -dpdf
+if tr_loc_state
+    print -dpdf ee_x
+else
+    print -dpdf ee_y
+end
 
 %Lambda
 figure
-for i=1:NAgents
-    if tr_loc_state
-        for j=1:dimp
-            plot(dt*(1:ifinal)-dt,Agents_log{i}.Lambda(j,:),'Color',colors(i,:))
-            hold on
-            plot(dt*(1:ifinal)-dt,Agents_log{i}.Lambda(j+dimp,:),'Color',colors(i,:),'LineStyle','--')
-        end
-    else
-        if i<= N_dvl
-            for j=1:dimp
-                plot(dt*(1:ifinal)-dt,Agents_log{i}.Lambda(j+dimp,:),'Color',colors(i,:),'LineStyle','--')
-                hold on
-            end
-        end
-        for j=(i<= N_dvl)*dimp+(1:Nb)
-            plot(dt*(1:ifinal)-dt,Agents_log{i}.Lambda(j,:),'Color',colors(i,:),'LineStyle','--')
-        end
-            
-        for j=((i<= N_dvl)*dimp+Nb):size(Agents_log{i}.Lambda,1)
-            plot(dt*(1:ifinal)-dt,Agents_log{i}.Lambda(j,:),'Color',colors(i,:))
-            hold on
-        end
+if tr_loc_state
+    %for i=1:NAgents
+    i=1;
+    for j=1:dimp
+        plot(dt*(1:ifinal)-dt,Agents_log{i}.Lambda(j,:),'b-')
+        hold on
+        plot(dt*(1:ifinal)-dt,Agents_log{i}.Lambda(j+dimp,:),'r-')
     end
+    %end
+else
+    i=1;
+    %for i=1:NAgents
+    for j=((i<= N_dvl)*dimp+NBeacons):size(Agents_log{i}.Lambda,1)
+       plot(dt*(1:ifinal)-dt,Agents_log{i}.Lambda(j,:),'b-')
+       hold on
+    end
+    for j=(i<= N_dvl)*dimp+(1:NBeacons)
+        plot(dt*(1:ifinal)-dt,Agents_log{i}.Lambda(j,:),'g-')
+        hold on
+    end
+    %end
+    %for i=1:N_dvl
+    for j=1:dimp
+        plot(dt*(1:ifinal)-dt,Agents_log{i}.Lambda(j+dimp,:),'r-')
+        hold on
+    end
+    %end
 end
 hold off
 setniceplot
 set(gca, 'YScale', 'log')
 ylabel('Quant. interval length')
 xlabel('t (s)')
-print -dpdf
+if tr_loc_state
+    print -dpdf lambda_x
+else
+    print -dpdf lambda_y
+end
+
+err=0;
+for i=1:NAgents
+    err=err+sum(sum((Agents_log{i}.x-Output_select{i}*Agents_log{i}.x_hat).^2))/(ifinal*NAgents);
+end
+fprintf('The error is %f\n',err);

@@ -4,7 +4,7 @@ disp('Initialization')
 Agents = cell(NAgents,1);
 Agents_broadcast = cell(NAgents,1);
 for i=1:NAgents
-    Agents{i}.x=[p_nominal(:,i);speed]+diag([xstd*ones(1,dimp) sstd*ones(1,dimp)])*randn(dim,1);
+    Agents{i}.x=[p_nominal(:,i);zeros(dimp,1)]+diag([xstd*ones(1,dimp) sstd*ones(1,dimp)])*randn(dim,1);
     %Observer
     if tr_loc_state
         Agents{i}.Observer = EKF_loc_state(i,A,B,p_beacon,N_dvl,wstd_o,vstd_o,v_distance_flag_o,dvlstd_o,xstd_o,sstd_o,p_nominal,speed,alpha,beta,Lambda_zero,Nb);
