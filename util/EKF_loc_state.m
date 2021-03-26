@@ -29,7 +29,7 @@ classdef EKF_loc_state < handle
        y_hat
    end
    methods
-       function obj=EKF_loc_state(id,A,B,p_beacon,N_dvl,wstd,vstd_d,v_distance_flag,dvlstd,xstd,sstd,p_nominal,speed,alpha,beta,Lambda_zero,Nbits)
+       function obj=EKF_loc_state(id,A,B,p_beacon,N_dvl,wstd,vstd_d,v_distance_flag,dvlstd,xstd,sstd,p_nominal,alpha,beta,Lambda_zero,Nbits)
            obj.id = id;
            obj.dimp = size(p_nominal,1);
            obj.dim = obj.dimp*2;
@@ -55,9 +55,9 @@ classdef EKF_loc_state < handle
            obj.v_distance_flag = v_distance_flag;
            obj.x_hat = zeros(obj.NAg*obj.dim,1);
            for j=1:obj.NAg
-               obj.x_hat=obj.x_hat+obj.State_select{j}'*[p_nominal(:,j);speed];
+               obj.x_hat=obj.x_hat+obj.State_select{j}'*[p_nominal(:,j);zeros(obj.dimp,1)];
            end
-           obj.x_hat_loc_next = [p_nominal(:,id);speed];
+           obj.x_hat_loc_next = [p_nominal(:,id);zeros(obj.dimp,1)];
            obj.P = kron(eye(obj.NAg),diag([xstd*ones(1,obj.dimp) sstd*ones(1,obj.dimp)]));
            obj.alpha = alpha;
            obj.beta = beta;

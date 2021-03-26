@@ -3,8 +3,6 @@ classdef Controller < handle
        dim
        dimp
        NAg
-       Freq
-       Pert_basis
        Ks
        Kp
        Dd
@@ -12,17 +10,19 @@ classdef Controller < handle
        v_cell
        Output_select
        POutput_select
-       p0
-       vd
        u
+       pd
+       dpd
    end
    methods
-       function obj=Controller(speed,Freq,Amp_pert,p_nominal,Ks,Kp)
+       function obj=Controller(p_nominal,Ks,Kp,pd,dpd)
            obj.dimp = size(p_nominal,1);
            obj.dim = obj.dimp*2;
            obj.NAg = size(p_nominal,2);
            obj.Ks = Ks;
            obj.Kp = Kp;
+           obj.pd = pd;
+           obj.dpd = dpd;
            obj.Dd = cell(obj.NAg,obj.NAg);
            for i=1:obj.NAg
                for j=1:obj.NAg
@@ -41,12 +41,6 @@ classdef Controller < handle
                obj.POutput_select{i}=zeros(obj.dimp,obj.NAg*obj.dimp);
                obj.POutput_select{i}(:,(obj.dimp*(i-1)+1):(obj.dimp*i)) = eye(obj.dimp);
            end
-           obj.p0 = p_nominal(:,1);
-           obj.vd = speed;
-           obj.Freq = Freq;
-           R = eye(obj.dimp);
-           R(1:2,1:2) = [0 1;-1 0];
-           obj.Pert_basis = Amp_pert*R*obj.vd*obj.Freq^-1;
            obj.u = zeros(obj.NAg*obj.dimp,1);
        end
        function update_control(obj,x_hat,t)
@@ -61,9 +55,9 @@ classdef Controller < handle
            
            % Leader controller
            i=1;
-           pd=obj.p0+obj.vd*t+obj.Pert_basis*sin(2*pi*obj.Freq*t);
-           ep=obj.pos_cell{i}-pd;
-           p_dot_d=obj.vd+2*pi*obj.Freq*obj.Pert_basis*cos(2*pi*obj.Freq*t)-obj.Kp*ep;
+           %pd=obj.p0+obj.vd*t+obj.Pert_basis*sin(2*pi*obj.Freq*t);
+           ep=obj.pos_cell{i}-obj.pd(t);
+           p_dot_d=obj.dpd(t)-obj.Kp*ep;
            es=obj.v_cell{i}-p_dot_d;
            ui=-obj.Ks*es;
            obj.u=obj.u+obj.POutput_select{i}'*ui;

@@ -28,7 +28,7 @@ classdef EKF_range < handle
        y_hat
    end
    methods
-       function obj=EKF_range(A,B,p_beacon,N_dvl,wstd,vstd_d,v_distance_flag,dvlstd,xstd,sstd,p_nominal,speed,alpha,beta,Lambda_zero,Nbits)
+       function obj=EKF_range(A,B,p_beacon,N_dvl,wstd,vstd_d,v_distance_flag,dvlstd,xstd,sstd,p_nominal,alpha,beta,Lambda_zero,Nbits)
            obj.dimp = size(p_nominal,1);
            obj.dim = obj.dimp*2;
            obj.NAg = size(p_nominal,2);
@@ -54,7 +54,7 @@ classdef EKF_range < handle
            obj.x_hat = zeros(obj.NAg*obj.dim,1);
            obj.y = zeros(2+obj.NAg*(obj.NAg-1),1);
            for j=1:obj.NAg
-               obj.x_hat=obj.x_hat+obj.State_select{j}'*[p_nominal(:,j);speed];
+               obj.x_hat=obj.x_hat+obj.State_select{j}'*[p_nominal(:,j);zeros(obj.dimp,1)];
            end
            obj.P = kron(eye(obj.NAg),diag([xstd*ones(1,obj.dimp) sstd*ones(1,obj.dimp)]));
            obj.alpha = alpha;

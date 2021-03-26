@@ -15,12 +15,12 @@ for Nb = Nb_min:Nb_max
             Agents{i}.x=[p_nominal(:,i);zeros(dimp,1)]+diag([xstd*ones(1,dimp) sstd*ones(1,dimp)])*randn(dim,1);
             %Observer
             if tr_loc_state
-                Agents{i}.Observer = EKF_loc_state(i,A,B,p_beacon,N_dvl,wstd_o,vstd_o,v_distance_flag_o,dvlstd_o,xstd_o,sstd_o,p_nominal,speed,alpha,beta,Lambda_zero,Nb);
+                Agents{i}.Observer = EKF_loc_state(i,A,B,p_beacon,N_dvl,wstd_o,vstd_o,v_distance_flag_o,dvlstd_o,xstd_o,sstd_o,p_nominal,alpha,beta,Lambda_zero,Nb);
             else
-                Agents{i}.Observer = EKF_range(A,B,p_beacon,N_dvl,wstd_o,vstd_o,v_distance_flag_o,dvlstd_o,xstd_o,sstd_o,p_nominal,speed,alpha,beta,Lambda_zero,Nb);
+                Agents{i}.Observer = EKF_range(A,B,p_beacon,N_dvl,wstd_o,vstd_o,v_distance_flag_o,dvlstd_o,xstd_o,sstd_o,p_nominal,alpha,beta,Lambda_zero,Nb);
             end
             %Control
-            Agents{i}.Controller = Controller(speed,Freq,Amp_pert,p_nominal,Ks,Kp);
+            Agents{i}.Controller = Controller(p_nominal,Ks,Kp,pd,dpd);
         end
         
         % Initalize log

@@ -32,7 +32,7 @@ else
     print -dpdf pos_y
 end
 
-%speed
+%velocity
 figure
 for i=1:NAgents
     plot(Agents_log{i}.x(3,:),Agents_log{i}.x(4,:),'Color',colors(i,:))
@@ -47,7 +47,7 @@ setniceplot
 axis equal
 xlabel('X')
 ylabel('Y')
-title('Speed')
+title('Velocity')
 %print -dpdf
 
 %Control
@@ -179,3 +179,36 @@ for i=1:NAgents
     err=err+sum(sum((Agents_log{i}.x-Output_select{i}*Agents_log{i}.x_hat).^2))/(ifinal*NAgents);
 end
 fprintf('The error is %f\n',err);
+
+
+% Position errors
+% Compute position error
+p_err=cell(NAgents,1);
+p_err_norm=cell(NAgents,1);
+
+for i=1:NAgents
+    p_err{i}=zeros(dimp,ifinal);
+    p_err_norm{i}=zeros(1,ifinal);
+end
+
+for j=1:ifinal
+    for i=1:NAgents
+        p_err{i}(:,j)=Agents_log{i}.x(1:dimp,j)-pd((j-1)*dt)+Dd{1,i};
+        p_err_norm{i}(j)=norm(p_err{i}(:,j));
+    end
+end
+
+figure
+for i=1:NAgents
+    plot(dt*(1:ifinal)-dt,p_err_norm{i},'Color',colors(i,:))
+    hold on
+end
+hold off
+setniceplot
+ylabel('Control error (m)')
+xlabel('t (s)')
+if tr_loc_state
+    print -dpdf ce_x
+else
+    print -dpdf ce_y
+end
