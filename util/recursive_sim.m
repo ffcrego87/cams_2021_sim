@@ -3,6 +3,19 @@
 Err_avg=zeros(1,Nb_max-Nb_min+1);
 Err_high=zeros(1,Nb_max-Nb_min+1);
 Err_low=inf*ones(1,Nb_max-Nb_min+1);
+Err_std=zeros(1,Nb_max-Nb_min+1);
+Err_CI95_high = zeros(1,Nb_max-Nb_min+1);
+Err_CI95_low = zeros(1,Nb_max-Nb_min+1);
+err_store=zeros(n_runs,Nb_max-Nb_min+1);
+
+% Global matrices and initial state
+Aglob = kron(eye(NAgents),A);
+Bglob = kron(eye(NAgents),B);
+x_init = zeros(NAgents*dim,1);
+for j=1:NAgents
+    x_init((j-1)*dim+(1:dim))=[p_nominal(:,j);zeros(dimp,1)];
+end
+CI95 = tinv([0.025 0.975], n_runs-1);
 
 for Nb = Nb_min:Nb_max
     fprintf('Nb=%i\n',Nb)
@@ -45,28 +58,32 @@ for Nb = Nb_min:Nb_max
         for j=1:ifinal
             
             %Measure and Broadcast / Measure, Update and Broadcast
-            for i=1:NAgents
-                %Measure
-                Agents{i}.y = measurement(i,Agents,vstd,v_distance_flag,dvlstd,p_beacon,N_dvl);
-                %Update
-                if tr_loc_state
-                    Agents{i}.Observer.Update(Agents{i}.y)
-                end
-                %Broadcast
-                if tr_loc_state
-                    Messages{i} = Agents{i}.Observer.Broadcast();
-                else
-                    Messages{i} = Agents{i}.Observer.Broadcast(Agents{i}.y,i);
+            if ~mod(j-1,Ndelay+1) || ~Ndelay
+                for i=1:NAgents
+                    %Measure
+                    Agents{i}.y = measurement(i,Agents,vstd,v_distance_flag,dvlstd,p_beacon,N_dvl);
+                    %Update
+                    if tr_loc_state
+                        Agents{i}.Observer.Update(Agents{i}.y)
+                    end
+                    %Broadcast
+                    if tr_loc_state
+                        Messages{i} = Agents{i}.Observer.Broadcast();
+                    else
+                        Messages{i} = Agents{i}.Observer.Broadcast(Agents{i}.y,i);
+                    end
                 end
             end
             
             %Update and Control / Fuse and Control
             for i=1:NAgents
                 % update / Fuse
-                if tr_loc_state
-                    Agents{i}.Observer.Fuse(Messages);
-                else
-                    Agents{i}.Observer.Update(Messages);
+                if ~mod(j-1,Ndelay+1) || ~Ndelay
+                    if tr_loc_state
+                        Agents{i}.Observer.Fuse(Messages);
+                    else
+                        Agents{i}.Observer.Update(Messages);
+                    end
                 end
                 % control
                 if debug_observer
@@ -76,8 +93,16 @@ for Nb = Nb_min:Nb_max
                     end
                     Agents{i}.Controller.update_control(x_cont,(j-1)*dt);
                 else
-                    Agents{i}.Controller.update_control(Agents{i}.Observer.x_hat,(j-1)*dt);
+                    if Ndelay>0
+                        x_cont = Agents_log{i}.x_hat(:,max(j-Ndelay,1));
+                        for kj=max(j-Ndelay,1):(j-1)
+                            x_cont = Aglob*x_cont+Bglob*Agents_log{i}.u(:,kj);
+                        end
+                    else
+                        x_cont = Agents{i}.Observer.x_hat;
+                    end
                 end
+                Agents{i}.Controller.update_control(Agents{i}.Observer.x_hat,(j-1)*dt);
             end
             
             %Log
@@ -102,8 +127,13 @@ for Nb = Nb_min:Nb_max
         for i=1:NAgents
             err = err+sum((sum((Agents_log{i}.x-Output_select{i}*Agents_log{i}.x_hat).^2)))/(ifinal*NAgents);
         end
+        err = sqrt(err);
+        err_store(srun,Nb-Nb_min+1) = err;
         Err_avg(Nb-Nb_min+1) = Err_avg(Nb-Nb_min+1)+err/n_runs;
         Err_high(Nb-Nb_min+1) = max(Err_high(Nb-Nb_min+1),err);
         Err_low(Nb-Nb_min+1) = min(Err_low(Nb-Nb_min+1),err);
     end
+    Err_std(Nb-Nb_min+1)=std(err_store(:,Nb-Nb_min+1))/sqrt(n_runs);
+    Err_CI95_high(Nb-Nb_min+1) = Err_std(Nb-Nb_min+1)*CI95(2);
+    Err_CI95_low(Nb-Nb_min+1) = Err_std(Nb-Nb_min+1)*CI95(1);
 end

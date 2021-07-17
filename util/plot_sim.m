@@ -59,8 +59,8 @@ end
 hold off
 setniceplot
 axis equal
-xlabel('X')
-ylabel('Y')
+xlabel('X (m)')
+ylabel('Y (m)')
 title('Control')
 %print -dpdf
 
@@ -71,8 +71,9 @@ hold on
 plot(dt*(1:ifinal)-dt,Agents_log{1}.y(2,:),'r-');
 hold off
 setniceplot
-ylabel('v')
-xlabel('t')
+xlim([0 dt*(ifinal-1)])
+ylabel('velocity (m/s)')
+xlabel('t (s)')
 title('Leader speed')
 %print -dpdf
 
@@ -87,8 +88,9 @@ for i=1:NAgents
 end
 hold off
 setniceplot
-ylabel('dist')
-xlabel('t')
+xlim([0 dt*(ifinal-1)])
+ylabel('distance (m)')
+xlabel('t (s)')
 title('Inter-vehicle range measurements')
 if tr_loc_state
     print -dpdf vr_x
@@ -107,8 +109,9 @@ for i=1:NAgents
 end
 hold off
 setniceplot
-xlabel('dist')
-xlabel('t')
+xlim([0 dt*(ifinal-1)])
+xlabel('distance (m)')
+xlabel('t (s)')
 title('Beacon-vehicle range measurements')
 if tr_loc_state
     print -dpdf br_x
@@ -125,6 +128,7 @@ for i=1:NAgents
 end
 hold off
 setniceplot
+xlim([0 dt*(ifinal-1)])
 ylabel('estimation error (m)')
 xlabel('t (s)')
 if tr_loc_state
@@ -165,6 +169,7 @@ else
 end
 hold off
 setniceplot
+xlim([0 dt*(ifinal-1)])
 set(gca, 'YScale', 'log')
 ylabel('Quant. interval length')
 xlabel('t (s)')
@@ -205,6 +210,7 @@ for i=1:NAgents
 end
 hold off
 setniceplot
+xlim([0 dt*(ifinal-1)])
 ylabel('Control error (m)')
 xlabel('t (s)')
 if tr_loc_state

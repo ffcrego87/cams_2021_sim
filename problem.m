@@ -1,14 +1,14 @@
 %% Example problem
 
 %% Type of simulation
-Nb_test = 1; % 0 - one simulation 1 - several simulations
+Nb_test = 0; % 0 - one simulation 1 - several simulations
 tr_loc_state = 1; % Transmit local state: 1 - exchange state estimates 0 -exchange measurements
 debug_observer = 0; % 0 - use estimates on the controller 1 - use true state on the controller
 
 %% Nb test parameters
-Nb_min = 2; % minimum number of bits
-Nb_max = 5; % maximum number of bits
-n_runs = 5; % number of runs
+Nb_min = 3; % minimum number of bits
+Nb_max = 9; % maximum number of bits
+n_runs = 25; % number of runs
 
 %% System
 
@@ -24,10 +24,10 @@ B  = kron([0;
 %% Noise
 
 % process noise observer
-wstd_o = 0.01; % process noise standard deviation
+wstd_o = 0.001; % process noise standard deviation
 
 % measurement noise observer
-vstd_o = 0.01; % measurement noise standard deviation x-0.01 y-0.05
+vstd_o = 0.05; % measurement noise standard deviation x-0.01 y-0.05
 v_distance_flag_o = 1; % is the noise dependent on distance
 dvlstd_o = 0.01; % dvl measurement noise standard deviation
 
@@ -36,7 +36,7 @@ xstd_o = 0.1; % Standard deviation of initial position
 sstd_o = 0.05; % Standard deviation of initial speed
 
 % process noise
-wstd  = 0.01;       % process noise standard deviation
+wstd  = 0.001;       % process noise standard deviation
 
 % measurement noise
 vstd  = 0.01; % measurement noise standard deviation per distance
@@ -69,7 +69,7 @@ N_dvl = 1;
 % dpd = @(t) vel+2*pi*Freq*Pert_basis*cos(2*pi*Freq*t);
 
 p0 = p_nominal(:,1);
-max_speed = 1;
+max_speed = 0.5;
 Size_pd = 50;
 
 pd = @(t) p0+Size_pd*[cos((max_speed/Size_pd)*t+pi/2);sin(2*(max_speed/Size_pd)*t+pi)/2];
@@ -79,17 +79,18 @@ dpd = @(t) max_speed*[-sin((max_speed/Size_pd)*t+pi/2);cos(2*(max_speed/Size_pd)
 alpha=2;
 beta=0.5;
 Lambda_zero=10;
-Nb = 3;
+Nb = 2;
+Ndelay = 0;
 
 %% Control gains
-Kp=0.5;
+Kp=0.2;
 Ks=1;
 
 %% Final iteration
-ifinal = 501;
+ifinal = ceil((Size_pd/max_speed)*4*pi);
 
 %% Formation plot 
-T_plot_form = max_speed*Size_pd*pi/4;
+T_plot_form = (Size_pd/max_speed)*pi/4;
 
 %% plot ranges for distance objactives
 dreps = 0.1;

@@ -15,6 +15,14 @@ for i=1:NAgents
     Agents{i}.Controller = Controller(p_nominal,Ks,Kp,pd,dpd);
 end
 
+% Global matrices and initial state
+Aglob = kron(eye(NAgents),A);
+Bglob = kron(eye(NAgents),B);
+x_init = zeros(NAgents*dim,1);
+for j=1:NAgents
+    x_init((j-1)*dim+(1:dim))=[p_nominal(:,j);zeros(dimp,1)];
+end
+
 % Initalize log
 Agents_log = cell(NAgents,1);
 for i=1:NAgents
@@ -37,30 +45,34 @@ Messages = cell(NAgents,1);
 disp('Simulation')
 
 for j=1:ifinal
-
+    
     %Measure and Broadcast / Measure, Update and Broadcast
-    for i=1:NAgents
-        %Measure
-        Agents{i}.y = measurement(i,Agents,vstd,v_distance_flag,dvlstd,p_beacon,N_dvl);
-        %Update
-        if tr_loc_state
-            Agents{i}.Observer.Update(Agents{i}.y)
-        end
-        %Broadcast
-        if tr_loc_state
-            Messages{i} = Agents{i}.Observer.Broadcast();
-        else
-            Messages{i} = Agents{i}.Observer.Broadcast(Agents{i}.y,i);
+    if ~mod(j-1,Ndelay+1) || ~Ndelay
+        for i=1:NAgents
+            %Measure
+            Agents{i}.y = measurement(i,Agents,vstd,v_distance_flag,dvlstd,p_beacon,N_dvl);
+            %Update
+            if tr_loc_state
+                Agents{i}.Observer.Update(Agents{i}.y)
+            end
+            %Broadcast
+            if tr_loc_state
+                Messages{i} = Agents{i}.Observer.Broadcast();
+            else
+                Messages{i} = Agents{i}.Observer.Broadcast(Agents{i}.y,i);
+            end
         end
     end
     
     %Update and Control / Fuse and Control
     for i=1:NAgents
         % update / Fuse
-        if tr_loc_state
-            Agents{i}.Observer.Fuse(Messages);
-        else
-            Agents{i}.Observer.Update(Messages);
+        if ~mod(j-1,Ndelay) || ~Ndelay
+            if tr_loc_state
+                Agents{i}.Observer.Fuse(Messages);
+            else
+                Agents{i}.Observer.Update(Messages);
+            end
         end
         % control
         if debug_observer
@@ -68,10 +80,21 @@ for j=1:ifinal
             for k=1:NAgents
                 x_cont=x_cont+Output_select{k}'*Agents{k}.x;
             end
-            Agents{i}.Controller.update_control(x_cont,(j-1)*dt);
         else
-            Agents{i}.Controller.update_control(Agents{i}.Observer.x_hat,(j-1)*dt);
+            if Ndelay>0
+                if (j-Ndelay)<1
+                    x_cont = x_init;
+                else
+                    x_cont = Agents_log{i}.x_hat(:,max(j-Ndelay,1));
+                end
+                for kj=max(j-Ndelay,1):(j-1)
+                    x_cont = Aglob*x_cont+Bglob*Agents_log{i}.u(:,kj);
+                end
+            else
+                x_cont = Agents{i}.Observer.x_hat;
+            end
         end
+        Agents{i}.Controller.update_control(x_cont,(j-1)*dt);
     end
     
     %Log
